@@ -13,7 +13,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useUserStore } from "../../store";
-import { API_URL } from '@env';
+import {API_URL} from '@env';
 
 export function Connexion() {
   const navigation = useNavigation();
@@ -29,6 +29,8 @@ export function Connexion() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [apiError, setApiError] = useState("");
+
+
 
   const setUser = useUserStore((state) => state.setUser);
 

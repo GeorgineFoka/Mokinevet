@@ -1,203 +1,237 @@
-import React, { useEffect, useState } from "react";
+import { useNavigation } from '@react-navigation/native';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
-  FlatList,
-  ActivityIndicator,
-  Image,
-} from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { useNavigation } from "@react-navigation/native";
-import { API_URL } from '@env';
-import { API_URL_FILE } from '@env';
-import { useUserStore } from "../../store";
+  TextInput,
+  StatusBar,
+  SafeAreaView,
+  ScrollView
+} from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
+
+
 
 export function Discussions() {
-  const navigation = useNavigation();
-  const { token } = useUserStore(); // récupération du token depuis zustand
-  const [loading, setLoading] = useState(false);
-  const [discussions, setDiscussions] = useState([]);
-  const [search, setSearch] = useState("");
-  const user = useUserStore((state) => state.user);
-
-  // --- Requête API pour récupérer les discussions
-  const fetchDiscussions = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/chat/mes-discussions`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`, // Auth avec token
-        },
-      });
-
-      if (!response.statut==200) {
-        throw new Error("Erreur lors du chargement des discussions");
-      }
-
-      const data = await response.json();
-      console.log(data);
-      setDiscussions(data?.discussions); // <- data doit être un tableau [{id, nom, lastMessage, date}, ...]
-    } catch (error) {
-      console.log("Erreur:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDiscussions();
-    console.log("Token dans Discussions:", token);
-  }, []);
-
-  // --- Affichage d’une discussion
-  const renderDiscussion = ({ item }) => (
-    <TouchableOpacity
-      style={styles.discussionContainer}
-      onPress={() => navigation.navigate("ChatScreen", { discussionId: item.id })}
-    >
-      {/* Avatar cercle gris */}
-     
-      <View style={styles.avatar}>
-       { item?.interlocuteur.pp ? 
-       <Image
-       style={{ width: 45, height: 45, borderRadius: 30,resizeMode: "cover", }} 
-       source={{
-    uri: item?.interlocuteur?.pp
-      ? `${API_URL_FILE}/${item?.interlocuteur?.pp}`
-      : null,
-  }}
-        />
-       : <Icon name="person" size={30} color="#fff" style={{ alignSelf: "center", marginTop: 7 }} />}     
-      </View>
-
-      {/* Nom + dernier message */}
-      <View style={styles.textContainer}>
-        <Text style={styles.name}>{ item?.interlocuteur?.nom.charAt(0).toUpperCase() + item?.interlocuteur?.nom?.slice(1)?.toLowerCase()}</Text>
-        <Text style={styles.lastMessage} numberOfLines={1}>
-          {item?.dernierMessage?.message} 
-        </Text>
-      </View>
-
-      
-
-      {/* Date */}
-      <Text style={styles.date}>{(item?.interlocuteur?.id>user?.id && item?.nonlupetit != 0) ? item?.nonlupetit : (item?.interlocuteur?.id<user?.id && item?.nonlugrand !=0) ? item?.nonlugrand : 
-     <Text>{item?.date}</Text> 
-      } </Text>
-    </TouchableOpacity>
-  );
-
+  const navigation = useNavigation()
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <SafeAreaView style={styles.container}>
+      <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
       
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={28} color="#006400" />
-        </TouchableOpacity>
+         <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+              </TouchableOpacity>
         <Text style={styles.headerTitle}>Discussions</Text>
-        <TouchableOpacity onPress={() => console.log("Nouveau chat")}>
-          <MaterialIcons name="add-circle" size={28} color="#006400" />
+        <TouchableOpacity onPress={()=>navigation.navigate('veterinaires')} style={styles.addButton}>
+          <View style={styles.addButtonCircle}>
+            <Text style={styles.addButtonText}>+</Text>
+          </View>
         </TouchableOpacity>
       </View>
 
-      {/* Barre de recherche */}
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Icon name="search" size={20} color="gray" style={{ marginRight: 8 }} />
-        <TextInput
-          placeholder="Rechercher"
-          style={styles.searchInput}
-          value={search}
-          onChangeText={setSearch}
-        />
+        <View style={styles.searchBar}>
+          <Icon name="search" size={20} color="#999" style={styles.searchIcon} />
+          <TextInput 
+            style={styles.searchInput}
+            placeholder="Rechercher"
+            placeholderTextColor="#999"
+          />
+        </View>
       </View>
 
-      {/* Liste */}
-      {loading ? (
-        <ActivityIndicator size="large" color="#006400" style={{ marginTop: 20 }} />
-      ) : (
-        <FlatList
-          data={discussions?.filter((d) =>
-            d?.interlocuteur?.nom?.toLowerCase().includes(search.toLowerCase())
-          )}
-          keyExtractor={(item) => item.interlocuteur.id.toString()}
-          renderItem={renderDiscussion}
-          contentContainerStyle={{ paddingBottom: 20 }}
-        />
-      )}
-    </View>
+      {/* Discussion List */}
+      <ScrollView style={styles.discussionsList}>
+        {/* Dr Patricia Moungeng */}
+        <TouchableOpacity style={styles.discussionItem}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>P</Text>
+          </View>
+          <View style={styles.discussionContent}>
+            <Text style={styles.discussionName}>Dr Patricia Moungeng</Text>
+            <Text style={styles.discussionMessage}>Bonjour Dr...</Text>
+          </View>
+          <View style={styles.discussionMeta}>
+            <Text style={styles.discussionTime}>14:10</Text>
+            <View style={styles.badgeContainer}>
+              <Text style={styles.badgeText}>1</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Dr Olivia Banga */}
+        <TouchableOpacity style={styles.discussionItem}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>O</Text>
+          </View>
+          <View style={styles.discussionContent}>
+            <Text style={styles.discussionName}>Dr Olivia Banga</Text>
+            <Text style={styles.discussionMessage}>Salut très chère</Text>
+          </View>
+          <View style={styles.discussionMeta}>
+            <Text style={styles.discussionTime}>Hier</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Dr Samuelson */}
+        <TouchableOpacity style={styles.discussionItem}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>S</Text>
+          </View>
+          <View style={styles.discussionContent}>
+            <Text style={styles.discussionName}>Dr Samuelson</Text>
+            <Text style={styles.discussionMessage}></Text>
+          </View>
+          <View style={styles.discussionMeta}>
+            <Text style={styles.discussionTime}>23/01/2025</Text>
+          </View>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingTop: 10,
+    backgroundColor: '#ffffff',
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  backButton: {
+    marginRight: 16,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#000",
+    fontSize: 25,
+    fontWeight: '800',
+    color: '#000',
+    flex: 1,
+    textAlign: 'center',
+    marginTop:10,
+  },
+  addButton: {
+    marginLeft: 16,
+  },
+  addButtonCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 35,
+     backgroundColor: "#0a7b46",
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop:10,
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontSize: 30,
+   
   },
   searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 15,
-    height: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    height: 45,
+  },
+  searchIcon: {
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: "#000",
+    fontSize: 16,
+    color: '#000',
   },
-  discussionContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+  discussionsList: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  discussionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#e0e0e0',
   },
   avatar: {
-    width: 45,
-    height: 45,
-    borderRadius: 30,
-    backgroundColor: "#d3d3d3",
-    marginRight: 12,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
   },
-  textContainer: {
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  discussionContent: {
     flex: 1,
   },
-  name: {
-    fontWeight: "bold",
+  discussionName: {
     fontSize: 16,
-    color: "#000",
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
   },
-  lastMessage: {
+  discussionMessage: {
     fontSize: 14,
-    color: "gray",
+    color: '#666',
   },
-  date: {
+  discussionMeta: {
+    alignItems: 'flex-end',
+  },
+  discussionTime: {
     fontSize: 12,
-    color: "white",
-    backgroundColor:"green",
-    padding:10
+    color: '#00AA5B',
+  },
+  badgeContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#00AA5B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  badgeText: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  backButton: {
+    backgroundColor: "#0a7b46",
+    borderRadius: 30,
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
   },
 });
+

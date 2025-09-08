@@ -28,6 +28,10 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { Discussions } from './ecrans/discussions';
 import { Prediagnostic } from './ecrans/prediagnostic';
 import { Paramnotif } from './ecrans/paramnotif';
+import { Veterinaires } from './ecrans/veterinaires';
+import { Contactvet } from './ecrans/contactvet';
+import { Marketplace } from './ecrans/marketplace';
+import { Profil } from './ecrans/profil';
 
 
 
@@ -69,7 +73,7 @@ const Tab = createBottomTabNavigator();
         />
         <Tab.Screen
           name="Marketplace"
-          component={Connexion}
+          component={Marketplace}
           options={{
             tabBarIcon: ({ color, size }) => (
               <MaterialCommunityIcons name="cart-outline" color={color} size={size} />
@@ -95,7 +99,7 @@ export default function App() {
     
       
       <NavigationContainer>
-        <Stack.Navigator initialRouteName='Accueil'>
+        <Stack.Navigator initialRouteName='Homepage'>
           <Stack.Screen 
             name="onboarding1" 
             component={Onboarding1} 
@@ -215,6 +219,29 @@ export default function App() {
               headerShown: false
             }} 
           />
+           <Stack.Screen 
+            name="veterinaires" 
+            component={Veterinaires}
+            options={{
+              headerShown: false
+            }} 
+          />
+          <Stack.Screen 
+            name="contactvet" 
+            component={Contactvet}
+            options={{
+              headerShown: false
+            }} 
+          />
+          <Stack.Screen 
+            name="profil" 
+            component={Profil}
+            options={{
+              headerShown: false
+            }} 
+          />
+          
+          
           
         
         
@@ -224,6 +251,6 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     
-  
+    
   );
 }

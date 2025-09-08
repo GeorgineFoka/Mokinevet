@@ -20,9 +20,9 @@ import { useNavigation } from "@react-navigation/native";
 export function Prediagnostic() {
   // ⚡ Axios instance avec token
   const API = axios.create({
-    baseURL: "http://172.17.4.17:8000/api/ia",
+    baseURL: "http://172.17.4.43:8000/api/ia",
     headers: {
-      Authorization: `Bearer 15|hXr09Mjm8MHiSPimulsGw7ZtOc9ckmOKVm92bZwca5428c22`, // 🔑 remplace par ton token
+      Authorization: `Bearer 16|lTVdq3XlTdF6roHWQnebtoOMjLfWXMMzO5RTt0vk30b68007`,
     },
   });
 
@@ -36,6 +36,7 @@ export function Prediagnostic() {
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
+  const [maladie, setMaladie] = useState("");
 
   // Input
   const [inputText, setInputText] = useState("");
@@ -49,6 +50,16 @@ export function Prediagnostic() {
   // Charger historique au montage
   useEffect(() => {
     fetchChats();
+
+    // Message de bienvenue
+    const welcomeMsg = {
+      id: 'welcome',
+      typeContenu: 'texte',
+      appartenance: 'ia',
+      contenu: { message: 'Que puis-je faire pour vous ?' },
+      created_at: new Date().toISOString(),
+    };
+    setMessages([welcomeMsg]);
   }, []);
 
   const fetchChats = async () => {
@@ -90,6 +101,7 @@ export function Prediagnostic() {
     const formData = new FormData();
     if (selectedImage) {
       formData.append("typeContenu", "fichier");
+      formData.append("maladie", maladie);
       formData.append("file", {
         uri: selectedImage.uri,
         name: selectedImage.fileName || "photo.jpg",
@@ -110,7 +122,7 @@ export function Prediagnostic() {
         typeContenu: selectedImage ? "fichier" : "texte",
         appartenance: "user",
         contenu: selectedImage
-          ? { lien: selectedImage.uri }
+          ? { lien: selectedImage.uri } // Image locale avant envoi
           : { message: inputText },
         created_at: new Date().toISOString(),
       };
@@ -122,12 +134,10 @@ export function Prediagnostic() {
       });
 
       if (res.data?.success) {
-        // Mettre à jour l’ID de discussion si nouveau
         if (!selectedChat && res.data.discussion_id) {
           setSelectedChat(res.data.discussion_id);
         }
 
-        // 🔹 Réponse IA instantanée
         if (res.data.ia_response) {
           const iaMsg = {
             id: Date.now() + 1,
@@ -160,6 +170,37 @@ export function Prediagnostic() {
 
   const handleLaunchGallery = () => {
     setPlusModalVisible(false);
+    setInputText('Maladie de la peau')
+    launchImageLibrary({ mediaType: "photo" }, (res) => {
+      if (!res.didCancel && !res.errorCode) {
+        setSelectedImage(res.assets[0]);
+      }
+    });
+  };
+
+  const handleLaunchPieds = () => {
+    setPlusModalVisible(false);
+    setMaladie('pieds')
+    launchImageLibrary({ mediaType: "photo" }, (res) => {
+      if (!res.didCancel && !res.errorCode) {
+        setSelectedImage(res.assets[0]);
+      }
+    });
+  };
+
+  const handleLaunchPeau = () => {
+    setPlusModalVisible(false);
+    setMaladie('peau')
+    launchImageLibrary({ mediaType: "photo" }, (res) => {
+      if (!res.didCancel && !res.errorCode) {
+        setSelectedImage(res.assets[0]);
+      }
+    });
+  };
+
+  const handleLaunchBouche = () => {
+    setPlusModalVisible(false);
+    setMaladie('bouche')
     launchImageLibrary({ mediaType: "photo" }, (res) => {
       if (!res.didCancel && !res.errorCode) {
         setSelectedImage(res.assets[0]);
@@ -179,15 +220,15 @@ export function Prediagnostic() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-       <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack('accueil')}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-            </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack('accueil')}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+        </TouchableOpacity>
         <Text style={styles.headerTitle}>Mokine IA</Text>
         <TouchableOpacity onPress={() => setSidebarVisible(true)}>
-          <Icon name="menu" size={24} color="#006400" />
+          <Icon name="menu" size={24} color="#006400" style={{ marginTop: 48 }} />
         </TouchableOpacity>
       </View>
 
@@ -201,9 +242,7 @@ export function Prediagnostic() {
               key={msg.id}
               style={[
                 styles.messageBubble,
-                msg.appartenance === "ia"
-                  ? styles.leftBubble
-                  : styles.rightBubble,
+                msg.appartenance === "ia" ? styles.leftBubble : styles.rightBubble,
               ]}
             >
               {msg.typeContenu === "texte" ? (
@@ -226,12 +265,9 @@ export function Prediagnostic() {
 
                   return iaResponse ? (
                     <View style={styles.card}>
-                      <Text style={styles.cardTitle}>
-                        {iaResponse?.result?.title}
-                      </Text>
+                      <Text style={styles.cardTitle}>{iaResponse?.result?.title}</Text>
                       <Text style={styles.cardConfidence}>
-                        Confiance :{" "}
-                        {(iaResponse?.confidence * 100).toFixed(1)}%
+                        Confiance : {(iaResponse?.confidence * 100).toFixed(1)}%
                       </Text>
                       {textEntries.length > 0 &&
                         textEntries.map(([key, value]) => (
@@ -242,17 +278,15 @@ export function Prediagnostic() {
                         ))}
                     </View>
                   ) : (
-                    <Text style={styles.messageText}>
-                      {msg?.contenu?.message}
-                    </Text>
+                    <Text style={styles.messageText}>{msg?.contenu?.message}</Text>
                   );
                 })()
               ) : (
                 <Image
                   source={{
-                    uri: msg.contenu?.lien?.startsWith("http")
-                      ? `http://172.17.4.17:8000/storage/${msg?.contenu?.lien}`
-                      : `http://172.17.4.17:8000/storage/${msg?.contenu?.lien}`,
+                    uri: msg.contenu?.lien?.startsWith("file:")
+                      ? msg.contenu?.lien
+                      : `http://172.17.4.43:8000/storage/${msg?.contenu?.lien}`,
                   }}
                   style={{ width: 120, height: 120, borderRadius: 8 }}
                 />
@@ -314,20 +348,20 @@ export function Prediagnostic() {
         >
           <TouchableWithoutFeedback>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Ajouter une image</Text>
-              <TouchableOpacity
-                style={styles.modalOption}
-                onPress={handleLaunchCamera}
-              >
-                <Icon name="camera-alt" size={24} color="#000" />
-                <Text style={styles.modalOptionText}>Caméra</Text>
+              <Text style={styles.modalTitle}>Choisir la maladie</Text>
+              <TouchableOpacity style={styles.modalOption} onPress={handleLaunchPeau}>
+                <Icon name="healing" size={24} color="#000" />
+                <Text style={styles.modalOptionText}>Maladie de la peau</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.modalOption}
-                onPress={handleLaunchGallery}
-              >
-                <Icon name="image" size={24} color="#000" />
-                <Text style={styles.modalOptionText}>Galerie</Text>
+
+              <TouchableOpacity style={styles.modalOption}  onPress={handleLaunchPieds} >
+                <Icon name="directions-run" size={24} color="#000" />
+                <Text style={styles.modalOptionText}>Maladie des pieds</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.modalOption}  onPress={handleLaunchBouche} >
+                <Icon name="mood" size={24} color="#000" />
+                <Text style={styles.modalOptionText}>Maladie de la bouche</Text>
               </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
@@ -355,6 +389,21 @@ export function Prediagnostic() {
                 <ActivityIndicator size="large" color="#006400" />
               ) : (
                 <ScrollView>
+                  {/* Nouveau chat */}
+                  <TouchableOpacity
+                    style={styles.historyItem}
+                    onPress={() => {
+                      setSelectedChat(null);
+                      setMessages([]);
+                      setSidebarVisible(false);
+                    }}
+                  >
+                    <Icon name="add-circle-outline" size={18} color="#006400" />
+                    <Text style={styles.historyItemText} numberOfLines={1}>
+                      Nouveau chat
+                    </Text>
+                  </TouchableOpacity>
+
                   {filteredChats.map((item) => (
                     <TouchableOpacity
                       key={item.id}
@@ -364,11 +413,7 @@ export function Prediagnostic() {
                         setSidebarVisible(false);
                       }}
                     >
-                      <Icon
-                        name="chat-bubble-outline"
-                        size={18}
-                        color="#006400"
-                      />
+                      <Icon name="chat-bubble-outline" size={18} color="#006400" />
                       <Text style={styles.historyItemText} numberOfLines={1}>
                         {item.title || `${item.date}`}
                       </Text>
@@ -400,119 +445,34 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
   },
-  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#000" },
+  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#000", marginTop: 50 },
   chatContainer: { flex: 1, padding: 10, width: "100%" },
-  messageBubble: {
-    maxWidth: "70%",
-    padding: 10,
-    borderRadius: 10,
-    marginVertical: 4,
-  },
+  messageBubble: { maxWidth: "70%", padding: 10, borderRadius: 10, marginVertical: 4 },
   leftBubble: { alignSelf: "flex-start", backgroundColor: "#e0f7fa" },
   rightBubble: { alignSelf: "flex-end", backgroundColor: "#c8e6c9" },
   messageText: { fontSize: 16, color: "#000" },
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: "#fff",
-  },
-  inputContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#eee",
-    borderRadius: 25,
-    paddingHorizontal: 10,
-  },
+  footer: { flexDirection: "row", alignItems: "center", padding: 10, backgroundColor: "#fff" },
+  inputContainer: { flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#eee", borderRadius: 25, paddingHorizontal: 10 },
   textInput: { flex: 1, fontSize: 16 },
   plusButton: { marginRight: 8 },
   sendButton: { marginLeft: 8 },
-  previewBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    padding: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 15 ,color: "#000" },
-  modalOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 15,
-    
-  },
-  modalOptionText: { fontSize: 18, marginLeft: 15,color: "#000" },
-  sidebarOverlay: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  sidebar: {
-    width: 300,
-    backgroundColor: "#fff",
-    padding: 14,
-    borderTopRightRadius: 10,
-    borderBottomRightRadius: 10,
-  },
-  sidebarHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
+  previewBox: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", padding: 8 },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalContent: { backgroundColor: "white", padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 15, color: "#000" },
+  modalOption: { flexDirection: "row", alignItems: "center", paddingVertical: 15 },
+  modalOptionText: { fontSize: 18, marginLeft: 15, color: "#000" },
+  sidebarOverlay: { flex: 1, flexDirection: "row", backgroundColor: "rgba(0,0,0,0.35)" },
+  sidebar: { width: 300, backgroundColor: "#fff", padding: 14, borderTopRightRadius: 10, borderBottomRightRadius: 10 },
+  sidebarHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
   sidebarTitle: { fontSize: 18, fontWeight: "700" },
-  historyItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#eee",
-  },
+  historyItem: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#eee" },
   historyItemText: { marginLeft: 8, color: "#000" },
-
-  card: {
-    backgroundColor: "#fff",
-    width: "150%",
-    padding: 12,
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    marginVertical: 5,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 6,
-    color: "#006400",
-  },
-  cardConfidence: {
-    fontSize: 14,
-    fontStyle: "italic",
-    marginBottom: 8,
-    color: "#555",
-  },
+  card: { backgroundColor: "#fff", width: "150%", padding: 12, borderRadius: 10, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, marginVertical: 5 },
+  cardTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 6, color: "#006400" },
+  cardConfidence: { fontSize: 14, fontStyle: "italic", marginBottom: 8, color: "#555" },
   cardRow: { marginBottom: 6 },
   cardKey: { fontWeight: "600", color: "#000" },
   cardValue: { color: "#333", marginLeft: 5 },
-    backButton: {
-    backgroundColor: "#0a7b46",
-    borderRadius: 30,
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
+  backButton: { backgroundColor: "#0a7b46", borderRadius: 30, width: 40, height: 40, alignItems: "center", justifyContent: "center", marginTop: 40 },
 });
