@@ -18,7 +18,8 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 import { useNavigation } from "@react-navigation/native";
 
 export function Prediagnostic() {
-  // ⚡ Axios instance avec token
+  const navigation = useNavigation();
+
   const API = axios.create({
     baseURL: "http://172.17.4.43:8000/api/ia",
     headers: {
@@ -26,32 +27,25 @@ export function Prediagnostic() {
     },
   });
 
-  // UI states
-  const navigation = useNavigation();
   const [plusModalVisible, setPlusModalVisible] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
-  // Data
   const [search, setSearch] = useState("");
   const [chats, setChats] = useState([]);
   const [messages, setMessages] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [maladie, setMaladie] = useState("");
 
-  // Input
   const [inputText, setInputText] = useState("");
   const [selectedImage, setSelectedImage] = useState(null);
 
-  // Loader
   const [loadingChats, setLoadingChats] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Charger historique au montage
   useEffect(() => {
     fetchChats();
 
-    // Message de bienvenue
     const welcomeMsg = {
       id: 'welcome',
       typeContenu: 'texte',
@@ -66,10 +60,7 @@ export function Prediagnostic() {
     try {
       setLoadingChats(true);
       const res = await API.get("/history");
-
-      if (res.data?.statut === 200) {
-        setChats(res.data.data || []);
-      }
+      if (res.data?.statut === 200) setChats(res.data.data || []);
     } catch (err) {
       console.log("Erreur fetchChats", err);
     } finally {
@@ -82,11 +73,8 @@ export function Prediagnostic() {
       setLoadingMessages(true);
       setSelectedChat(chatId);
       const res = await API.get(`/request/${chatId}`);
-      if (res.data?.statut === 200) {
-        setMessages(res.data.data || []);
-      } else {
-        setMessages([]);
-      }
+      if (res.data?.statut === 200) setMessages(res.data.data || []);
+      else setMessages([]);
     } catch (err) {
       console.log("Erreur fetchMessages", err);
     } finally {
@@ -94,7 +82,6 @@ export function Prediagnostic() {
     }
   };
 
-  // 🔹 Envoi texte ou image
   const handleSend = async () => {
     if (!inputText && !selectedImage) return;
 
@@ -116,27 +103,21 @@ export function Prediagnostic() {
     try {
       setSending(true);
 
-      // 🔹 Ajouter le message utilisateur immédiatement
       const userMsg = {
         id: Date.now(),
         typeContenu: selectedImage ? "fichier" : "texte",
         appartenance: "user",
-        contenu: selectedImage
-          ? { lien: selectedImage.uri } // Image locale avant envoi
-          : { message: inputText },
+        contenu: selectedImage ? { lien: selectedImage.uri } : { message: inputText },
         created_at: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, userMsg]);
 
-      // 🔹 Envoi au backend
       const res = await API.post("/request/send", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (res.data?.success) {
-        if (!selectedChat && res.data.discussion_id) {
-          setSelectedChat(res.data.discussion_id);
-        }
+        if (!selectedChat && res.data.discussion_id) setSelectedChat(res.data.discussion_id);
 
         if (res.data.ia_response) {
           const iaMsg = {
@@ -158,72 +139,24 @@ export function Prediagnostic() {
     }
   };
 
-  // Image picker
-  const handleLaunchCamera = () => {
+  const pickImage = (type) => {
     setPlusModalVisible(false);
-    launchCamera({ mediaType: "photo" }, (res) => {
-      if (!res.didCancel && !res.errorCode) {
-        setSelectedImage(res.assets[0]);
-      }
-    });
-  };
-
-  const handleLaunchGallery = () => {
-    setPlusModalVisible(false);
-    setInputText('Maladie de la peau')
+    setMaladie(type);
     launchImageLibrary({ mediaType: "photo" }, (res) => {
-      if (!res.didCancel && !res.errorCode) {
-        setSelectedImage(res.assets[0]);
-      }
+      if (!res.didCancel && !res.errorCode) setSelectedImage(res.assets[0]);
     });
   };
 
-  const handleLaunchPieds = () => {
-    setPlusModalVisible(false);
-    setMaladie('pieds')
-    launchImageLibrary({ mediaType: "photo" }, (res) => {
-      if (!res.didCancel && !res.errorCode) {
-        setSelectedImage(res.assets[0]);
-      }
-    });
-  };
-
-  const handleLaunchPeau = () => {
-    setPlusModalVisible(false);
-    setMaladie('peau')
-    launchImageLibrary({ mediaType: "photo" }, (res) => {
-      if (!res.didCancel && !res.errorCode) {
-        setSelectedImage(res.assets[0]);
-      }
-    });
-  };
-
-  const handleLaunchBouche = () => {
-    setPlusModalVisible(false);
-    setMaladie('bouche')
-    launchImageLibrary({ mediaType: "photo" }, (res) => {
-      if (!res.didCancel && !res.errorCode) {
-        setSelectedImage(res.assets[0]);
-      }
-    });
-  };
-
-  // Filtrage des discussions
   const filteredChats = useMemo(() => {
     if (!search.trim()) return chats;
-    return chats.filter((c) =>
-      c.title?.toLowerCase().includes(search.toLowerCase())
-    );
+    return chats.filter((c) => c.title?.toLowerCase().includes(search.toLowerCase()));
   }, [search, chats]);
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack('accueil')}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack('accueil')}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mokine IA</Text>
@@ -232,7 +165,7 @@ export function Prediagnostic() {
         </TouchableOpacity>
       </View>
 
-      {/* Corps messages */}
+      {/* Messages */}
       <ScrollView style={styles.chatContainer}>
         {loadingMessages ? (
           <ActivityIndicator size="large" color="#006400" />
@@ -245,43 +178,88 @@ export function Prediagnostic() {
                 msg.appartenance === "ia" ? styles.leftBubble : styles.rightBubble,
               ]}
             >
-              {msg.typeContenu === "texte" ? (
-                (() => {
-                  let iaResponse = msg?.contenu?.message;
-                  if (iaResponse && typeof iaResponse === "string") {
-                    try {
-                      iaResponse = JSON.parse(iaResponse);
-                    } catch (err) {
-                      iaResponse = null;
-                    }
-                  }
+              {msg.typeContenu === "texte" ? (() => {
+                let iaResponse = msg?.contenu?.message;
+                if (iaResponse && typeof iaResponse === "string") {
+                  try { iaResponse = JSON.parse(iaResponse); } catch { iaResponse = null; }
+                }
 
-                  let textEntries = [];
-                  if (iaResponse?.result?.text) {
-                    const t = iaResponse.result.text;
-                    textEntries =
-                      typeof t === "string" ? [] : Object.entries(t);
-                  }
-
-                  return iaResponse ? (
+                if (iaResponse?.modele) {
+                  const modele = iaResponse.modele;
+                  return (
                     <View style={styles.card}>
-                      <Text style={styles.cardTitle}>{iaResponse?.result?.title}</Text>
-                      <Text style={styles.cardConfidence}>
-                        Confiance : {(iaResponse?.confidence * 100).toFixed(1)}%
-                      </Text>
-                      {textEntries.length > 0 &&
-                        textEntries.map(([key, value]) => (
-                          <View key={key} style={styles.cardRow}>
-                            <Text style={styles.cardKey}>{key} :</Text>
-                            <Text style={styles.cardValue}>{value}</Text>
+                      {modele === "pieds" && (
+                        <>
+                          <Text style={styles.cardTitle}>{iaResponse?.result?.title}</Text>
+                          <Text style={styles.cardConfidence}>
+                            Confiance : {(iaResponse?.confidence * 100)?.toFixed(1)}%
+                          </Text>
+                          {iaResponse?.result?.text &&
+                            Object.entries(iaResponse.result.text).map(([key, value]) => (
+                              <View key={key} style={styles.cardRow}>
+                                <Text style={styles.cardKey}>{key} :</Text>
+                                <Text style={styles.cardValue}>{value}</Text>
+                              </View>
+                            ))}
+                        </>
+                      )}
+                      {modele === "peau" && (
+                        <>
+                          <Text style={styles.cardTitle}>État de la peau : {iaResponse?.predicted_class}</Text>
+                          <Text style={styles.cardConfidence}>
+                            Confiance : {(iaResponse?.confidence_percent)?.toFixed(2)}%
+                          </Text>
+                          <View style={styles.cardRow}>
+                            <Text style={styles.cardKey}>Message :</Text>
+                            <Text style={styles.cardValue}>{iaResponse?.explanation?.message}</Text>
                           </View>
-                        ))}
+                          <View style={styles.cardRow}>
+                            <Text style={styles.cardKey}>Conseils :</Text>
+                            <Text style={styles.cardValue}>{iaResponse?.explanation?.care_tips}</Text>
+                          </View>
+                          <View style={styles.cardRow}>
+                            <Text style={styles.cardKey}>Rassurance :</Text>
+                            <Text style={styles.cardValue}>{iaResponse?.explanation?.reassurance}</Text>
+                          </View>
+                        </>
+                      )}
+                      {modele === "bouche" && (
+                        <>
+                          <Text style={styles.cardTitle}>Diagnostic : {iaResponse?.details?.diagnostic}</Text>
+                          <Text style={styles.cardConfidence}>
+                            Confiance : {iaResponse?.confidence?.toFixed(2)}%
+                          </Text>
+                          <View style={styles.cardRow}>
+                            <Text style={styles.cardKey}>Causes :</Text>
+                            {iaResponse?.details?.causes.map((c, idx) => (
+                              <Text key={idx} style={styles.cardValue}>- {c}</Text>
+                            ))}
+                          </View>
+                          <View style={styles.cardRow}>
+                            <Text style={styles.cardKey}>Conseils :</Text>
+                            <Text style={styles.cardValue}>{iaResponse?.details?.conseils}</Text>
+                          </View>
+                          <View style={styles.cardRow}>
+                            <Text style={styles.cardKey}>Prévention :</Text>
+                            {iaResponse?.details?.prevention.map((p, idx) => (
+                              <Text key={idx} style={styles.cardValue}>- {p}</Text>
+                            ))}
+                          </View>
+                        </>
+                      )}
+
+                      <TouchableOpacity
+                        style={styles.contactButton}
+                        onPress={() => navigation.navigate('veterinaires')}
+                      >
+                        <Text style={styles.contactButtonText}>Contacter un vétérinaire</Text>
+                      </TouchableOpacity>
                     </View>
-                  ) : (
-                    <Text style={styles.messageText}>{msg?.contenu?.message}</Text>
                   );
-                })()
-              ) : (
+                } else {
+                  return <Text style={styles.messageText}>{msg?.contenu?.message}</Text>;
+                }
+              })() : (
                 <Image
                   source={{
                     uri: msg.contenu?.lien?.startsWith("file:")
@@ -299,10 +277,7 @@ export function Prediagnostic() {
       {/* Footer */}
       <View style={styles.footer}>
         <View style={styles.inputContainer}>
-          <TouchableOpacity
-            style={styles.plusButton}
-            onPress={() => setPlusModalVisible(true)}
-          >
+          <TouchableOpacity style={styles.plusButton} onPress={() => setPlusModalVisible(true)}>
             <Icon name="add" size={24} color="#808080" />
           </TouchableOpacity>
           <TextInput
@@ -312,56 +287,38 @@ export function Prediagnostic() {
             onChangeText={setInputText}
             placeholderTextColor="#A9A9A9"
           />
-          <TouchableOpacity
-            style={styles.sendButton}
-            onPress={handleSend}
-            disabled={sending}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#006400" />
-            ) : (
-              <Icon name="send" size={24} color="#006400" />
-            )}
+          <TouchableOpacity style={styles.sendButton} onPress={handleSend} disabled={sending}>
+            {sending ? <ActivityIndicator size="small" color="#006400" /> : <Icon name="send" size={24} color="#006400" />}
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Aperçu image */}
       {selectedImage && (
         <View style={styles.previewBox}>
-          <Image
-            source={{ uri: selectedImage.uri }}
-            style={{ width: 80, height: 80, borderRadius: 8 }}
-          />
+          <Image source={{ uri: selectedImage.uri }} style={{ width: 80, height: 80, borderRadius: 8 }} />
           <TouchableOpacity onPress={() => setSelectedImage(null)}>
             <Icon name="close" size={20} color="red" />
           </TouchableOpacity>
         </View>
       )}
 
-      {/* MODAL + */}
+      {/* Modal + */}
       <Modal transparent visible={plusModalVisible} animationType="slide">
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setPlusModalVisible(false)}
-        >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPlusModalVisible(false)}>
           <TouchableWithoutFeedback>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Choisir la maladie</Text>
-              <TouchableOpacity style={styles.modalOption} onPress={handleLaunchPeau}>
-                <Icon name="healing" size={24} color="#000" />
-                <Text style={styles.modalOptionText}>Maladie de la peau</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.modalOption}  onPress={handleLaunchPieds} >
+              <Text style={styles.modalTitle}>Choisir un modèle</Text>
+              <TouchableOpacity style={styles.modalOption} onPress={() => pickImage("pieds")}>
                 <Icon name="directions-run" size={24} color="#000" />
-                <Text style={styles.modalOptionText}>Maladie des pieds</Text>
+                <Text style={styles.modalOptionText}>Modèle des pieds</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity style={styles.modalOption}  onPress={handleLaunchBouche} >
+              <TouchableOpacity style={styles.modalOption} onPress={() => pickImage("peau")}>
+                <Icon name="healing" size={24} color="#000" />
+                <Text style={styles.modalOptionText}>Modèle de la peau</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalOption} onPress={() => pickImage("bouche")}>
                 <Icon name="mood" size={24} color="#000" />
-                <Text style={styles.modalOptionText}>Maladie de la bouche</Text>
+                <Text style={styles.modalOptionText}>Modèle de la bouche</Text>
               </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
@@ -389,7 +346,6 @@ export function Prediagnostic() {
                 <ActivityIndicator size="large" color="#006400" />
               ) : (
                 <ScrollView>
-                  {/* Nouveau chat */}
                   <TouchableOpacity
                     style={styles.historyItem}
                     onPress={() => {
@@ -423,10 +379,7 @@ export function Prediagnostic() {
               )}
             </View>
           </TouchableWithoutFeedback>
-          <TouchableOpacity
-            style={{ flex: 1 }}
-            onPress={() => setSidebarVisible(false)}
-          />
+          <TouchableOpacity style={{ flex: 1 }} onPress={() => setSidebarVisible(false)} />
         </View>
       </Modal>
     </View>
@@ -435,16 +388,7 @@ export function Prediagnostic() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F5F5F5" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E0E0E0",
-  },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12, backgroundColor: "#FFFFFF", borderBottomWidth: 1, borderBottomColor: "#E0E0E0" },
   headerTitle: { fontSize: 20, fontWeight: "bold", color: "#000", marginTop: 50 },
   chatContainer: { flex: 1, padding: 10, width: "100%" },
   messageBubble: { maxWidth: "70%", padding: 10, borderRadius: 10, marginVertical: 4 },
@@ -474,5 +418,7 @@ const styles = StyleSheet.create({
   cardRow: { marginBottom: 6 },
   cardKey: { fontWeight: "600", color: "#000" },
   cardValue: { color: "#333", marginLeft: 5 },
+  contactButton: { marginTop: 10, backgroundColor: "#006400", padding: 10, borderRadius: 8, alignItems: "center" },
+  contactButtonText: { color: "#fff", fontWeight: "600" },
   backButton: { backgroundColor: "#0a7b46", borderRadius: 30, width: 40, height: 40, alignItems: "center", justifyContent: "center", marginTop: 40 },
 });
